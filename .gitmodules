@@ -1,0 +1,3 @@
+[submodule "repulsive_ensembles"]
+	path = repulsive_ensembles
+	url = https://github.com/ratschlab/repulsive_ensembles
