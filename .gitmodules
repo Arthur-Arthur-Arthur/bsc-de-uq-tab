@@ -1,3 +1,6 @@
 [submodule "repulsive_ensembles"]
 	path = repulsive_ensembles
 	url = https://github.com/ratschlab/repulsive_ensembles
+[submodule "Uncertainty-Quantification-and-Deep-Ensemble"]
+	path = Uncertainty-Quantification-and-Deep-Ensemble
+	url = https://github.com/rahulrahaman/Uncertainty-Quantification-and-Deep-Ensemble
