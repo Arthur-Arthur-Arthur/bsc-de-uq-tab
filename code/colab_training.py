@@ -71,14 +71,6 @@ model = ensemble.EmbAndEnsemble(
 )
 optimizer = torch.optim.RAdam(model.parameters(), LEARNING_RATE)
 
-
-class LossShared(torch.nn.Module):
-    def __init__(self):
-        super().__init__()
-
-    def forward(self, y_prim, y):
-        loss = -torch.mean(y * torch.log(y_prim + 1e-8))
-        return loss
     
 class LossSeperate(torch.nn.Module):
     def __init__(self):
@@ -108,7 +100,6 @@ std_plot_test = []
 
 conf_matrix_train = np.zeros((len(dataset_full.Y_labels), len(dataset_full.Y_labels)))
 conf_matrix_test = np.zeros((len(dataset_full.Y_labels), len(dataset_full.Y_labels)))
-plt.show()
 for epoch in range(1, 1000):
     epoch_start=time.time()
     for dataloader in [dataloader_train, dataloader_test]:
@@ -237,5 +228,5 @@ for epoch in range(1, 1000):
                     )
             ax.set_xlabel('True')
             ax.set_ylabel('Predicted')
-        
+        plt.show()
 # %%

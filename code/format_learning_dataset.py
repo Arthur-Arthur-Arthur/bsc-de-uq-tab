@@ -19,7 +19,7 @@ def remove_singular(df):
 def remove_too_sparse(df:pd.DataFrame,min_real):
     df = df[[c for c
         in list(df)
-        if df[c].count()/df.shape[0] > min_real]]
+        if (df[c].count()-df[c].isin([0.0]).sum())/df.shape[0] > min_real]]
     return df
 def limit_embedding_count(df,max_embeddings):
     df = df[[c for c
@@ -80,6 +80,7 @@ def remove_outliers(df:pd.DataFrame):
     return df
 def format_dataset(df:pd.DataFrame, y_name):
     df = df.dropna(axis='columns',how='all')
+    df=df.drop(columns='id')
     df=remove_singular(df)
     df=limit_embedding_count(df,1000)
     df=merge_other(df,0.1)
@@ -96,17 +97,24 @@ def table_to_learn(df,y_name):
     df_x,df_y=split_xy(df,y_name)
 
     return df_x,df_y,labels
-csv_path="./data/accepted_2007_to_2018Q4.csv"
-load_path="./data/accepted_pickle.pkl"
-save_path="./data/loan_ml100.pkl"
-#df= pd.read_csv(csv_path,low_memory=False)  
-with open(f"{load_path}", "rb") as fp:
-    df = pickle.load(fp)
+csv_load_path="./data/accepted_2007_to_2018Q4.csv"
+pkl_load_path="./data/accepted_pickle.pkl"
+csv_save_path="./data/accepted_clean.csv"
+pkl_save_path="./data/loan_ml100.pkl"
+load_from_csv=False
+save_to_csv=False
+if load_from_csv:
+    df= pd.read_csv(csv_load_path,low_memory=False)  
+else:
+    with open(f"{pkl_load_path}", "rb") as fp:
+        df = pickle.load(fp)
 df=shrink_data(df,100)
 df_formed=format_dataset(df,'loan_status') 
+if save_to_csv:
+    df_formed.to_csv(csv_save_path,index=False)
 dset=table_to_learn(df=df_formed,y_name='loan_status')
 
-with open(save_path, 'wb') as file: 
+with open(pkl_save_path, 'wb') as file: 
     pickle.dump(dset, file) 
 
 
