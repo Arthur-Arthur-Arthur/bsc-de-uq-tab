@@ -6,8 +6,6 @@ def calc_ece(y,y_prim,bin_count):
     y_prim_idx=np.argmax(y_prim,1)
     conf=np.max(y_prim,1)
     correct=np.where(y_idx==y_prim_idx,1,0)
-    print(np.sum(y,1)[1]) #check if correct axis
-    print(np.sum(y_prim,1)[1]) 
     bin_idxs=np.digitize(conf,bins)
     bin_eces=np.zeros_like(bins)
     bin_counts=np.zeros_like(bins)#I think the metric is more stable if results were weighed by bin size
@@ -22,3 +20,6 @@ def calc_ece(y,y_prim,bin_count):
             bin_eces[i]=0
     return np.sum(bin_eces*bin_counts)/y.shape[0]
 
+def nll(y_prim,y):
+    loss = -np.mean(y * np.log(y_prim + 1e-8))
+    return loss
