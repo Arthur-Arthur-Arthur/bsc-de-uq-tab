@@ -80,12 +80,13 @@ def remove_outliers(df:pd.DataFrame):
     return df
 def format_dataset(df:pd.DataFrame, y_name):
     df = df.dropna(axis='columns',how='all')
-    df=df.drop(columns='id')
+    df.update(df.dropna(subset='loan_status'))
+    #df=df.drop(columns='id')
     df=remove_singular(df)
     df=limit_embedding_count(df,1000)
-    df=merge_other(df,0.1)
     df=remove_too_sparse(df,0.7)
-    df.update(df.select_dtypes(include=['object']).fillna("Missing Value"))
+    df=merge_other(df,0.1)
+    df.update(df.select_dtypes(include=['object']).fillna(df.select_dtypes(include=['object']).mode()))
     df.update(df.select_dtypes(include=['number']).fillna(df.select_dtypes(include=['number']).mean()))
     df=remove_outliers(df)
     df=type_sort(df)
@@ -97,19 +98,94 @@ def table_to_learn(df,y_name):
     df_x,df_y=split_xy(df,y_name)
 
     return df_x,df_y,labels
+
+def specific_cleanup(df:pd.DataFrame):
+    emp_length_mapping = {
+    '10+ years': 10,
+    '9 years': 9,
+    '8 years': 8,
+    '7 years': 7,
+    '6 years': 6,
+    '5 years': 5,
+    '4 years': 4,
+    '3 years': 3,
+    '2 years': 2,
+    '1 year': 1,
+    '< 1 year': 0.5,
+    'n/a': 0
+}
+    df['emp_length_float'] = df['emp_length'].map(emp_length_mapping)
+    df.drop(['emp_length'], axis=1, inplace=True)
+    term_mapping = {' 36 months':36.0,' 60 months':60.0}
+    df['term_float'] = df['term'].map(term_mapping)
+    df.drop(['term'], axis=1, inplace=True)
+
+    direct_indicators = [
+        'collection_recovery_fee',
+        'last_pymnt_amnt',
+        'out_prncp',
+        'out_prncp_inv',
+        'recoveries',
+        'total_pymnt',
+        'total_pymnt_inv',
+        'total_rec_int',
+        'total_rec_late_fee',
+        'total_rec_prncp'
+    ]
+    df.drop(direct_indicators, axis=1, inplace=True)
+    
+    df.drop(['id','emp_title','url','title','zip_code','grade'], axis=1, inplace=True)
+
+    df['sub_grade']=df['sub_grade'].apply(sub_grade_to_num)
+    for date in ['issue_d','earliest_cr_line','last_pymnt_d','next_pymnt_d','last_credit_pull_d','debt_settlement_flag_date','settlement_date']:
+        df[date]=df[date].apply(date_to_num)
+    print(df.select_dtypes(include=["object"]).nunique())
+    return df
+
+
+
+def sub_grade_to_num(letter_and_num):
+    if not isinstance(letter_and_num,str):
+        return np.nan
+    return (ord(letter_and_num[0]) - 64)*5+int(letter_and_num[1])
+
+def date_to_num(date:str):
+    if not isinstance(date,str):
+        return np.nan
+    month,year=(*date.split('-'),)
+    month_mapping = {
+    'Jan': 0,
+    'Feb': 1,
+    'Mar': 2,
+    'Apr': 3,
+    'May': 4,
+    'Jun': 5,
+    'Jul': 6,
+    'Aug': 7,
+    'Sep': 8,
+    'Oct': 9,
+    'Nov': 10,
+    'Dec': 11
+}
+    return (int(year))-2000+month_mapping[month]/12.0
+
 csv_load_path="./data/accepted_2007_to_2018Q4.csv"
 pkl_load_path="./data/accepted_pickle.pkl"
-csv_save_path="./data/accepted_clean.csv"
-pkl_save_path="./data/loan_ml100.pkl"
-load_from_csv=False
-save_to_csv=False
+csv_save_path="./data/squeaky_clean2.csv"
+pkl_save_path="./data/loan_squeak.pkl"
+load_from_csv=True
+save_to_csv=True
 if load_from_csv:
     df= pd.read_csv(csv_load_path,low_memory=False)  
 else:
     with open(f"{pkl_load_path}", "rb") as fp:
         df = pickle.load(fp)
-df=shrink_data(df,100)
+
+df=shrink_data(df,1)
+print(df.head())
+df=specific_cleanup(df)
 df_formed=format_dataset(df,'loan_status') 
+print(df_formed.select_dtypes(include=["object"]).nunique())
 if save_to_csv:
     df_formed.to_csv(csv_save_path,index=False)
 dset=table_to_learn(df=df_formed,y_name='loan_status')

@@ -56,7 +56,7 @@ class Member(torch.nn.Module):
             self.hidden_layers = torch.nn.ModuleList(
                 [Layer(2*width, width) for n in range(depth)]
             )
-        self.output_layer = torch.nn.Sequential(Layer(width, output_size),torch.nn.Softmax(1))
+        self.output_layer = torch.nn.Sequential(Layer(width, output_size),torch.nn.Softmax(-1))
 
     def forward(self, x):
         out = self.input_layer.forward(x)
@@ -76,7 +76,7 @@ class Layer(torch.nn.Module):
         self.layer = torch.nn.Sequential(
             torch.nn.Linear(input_size, output_size,dtype=torch.float32),
             torch.nn.BatchNorm1d(output_size,dtype=torch.float32),
-            torch.nn.ReLU(),
+            torch.nn.Tanh(),                
         )
 
     def forward(self, x):

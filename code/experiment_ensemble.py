@@ -15,7 +15,7 @@ import metrics
 import torcheval.metrics
 from tqdm import tqdm
 
-LEARNING_RATE = 1e-3
+LEARNING_RATE = 1e-4
 BATCH_SIZE = 1024
 TRAIN_TEST_SPLIT = 0.8
 EMBEDDING_SIZE = 2
@@ -24,7 +24,9 @@ if torch.cuda.is_available():
     DEVICE = "cuda"
 
 
-dataset_full = dataset.Dataset("./data/loan_ml100.pkl")
+dataset_full = dataset.Dataset("./data/loan_squeak.pkl")
+dataset_full.Y.to(DEVICE)
+
 
 train_test_split = int(len(dataset_full) * TRAIN_TEST_SPLIT)
 dataset_train, dataset_test = torch.utils.data.random_split(
@@ -52,8 +54,8 @@ dataloader_train = torch.utils.data.DataLoader(
     dataset=dataset_train,
     batch_size=BATCH_SIZE,
     drop_last=(len(dataset_train) % BATCH_SIZE == 1),
-    #sampler=sampler,
-    shuffle=True
+    sampler=sampler,
+    #shuffle=True
 )
 
 dataloader_test = torch.utils.data.DataLoader(
@@ -66,10 +68,10 @@ model_ensemble = ensemble.Ensemble(
         dataset_full.X.shape[1] + dataset_full.X_classes.shape[1] * EMBEDDING_SIZE
     ),
     output_size=len(dataset_full.labels[-1]),
-    depths=[32],
-    widths=[512],
-    modes=["res"],
-    n_members=1,
+    depths=[8,16],
+    widths=[1024,256],
+    modes=["res","res"],
+    n_members=2,
     device=DEVICE,
 )
 model = ensemble.EmbAndEnsemble(
@@ -90,6 +92,17 @@ class LossShared(torch.nn.Module):
         return loss
 
 
+class LossSeperateLog(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, y_prims, y):
+        y = y.unsqueeze(dim=0)
+        y = y.expand(y_prims.size())
+        losses=torch.sum(-(y * torch.log(y_prims + 1e-8)),0)
+        loss = torch.mean(losses)
+        return loss
+
 class LossSeperate(torch.nn.Module):
     def __init__(self):
         super().__init__()
@@ -97,13 +110,12 @@ class LossSeperate(torch.nn.Module):
     def forward(self, y_prims, y):
         y = y.unsqueeze(dim=0)
         y = y.expand(y_prims.size())
-        loss = -torch.mean(y * torch.log(y_prims + 1e-8))
+        loss = -torch.mean(y * y_prims)
         return loss
 
+loss_fn = LossSeperateLog().to(DEVICE)
 
-loss_fn = LossSeperate()
-
-
+model.to(DEVICE)
 loss_plot_train = []
 loss_plot_test = []
 
@@ -125,7 +137,7 @@ f1_plot_test = []
 conf_matrix_train = np.zeros((len(dataset_full.Y_labels), len(dataset_full.Y_labels)))
 conf_matrix_test = np.zeros((len(dataset_full.Y_labels), len(dataset_full.Y_labels)))
 
-for epoch in range(1, 1000):
+for epoch in range(1, 100):
     epoch_start = time.time()
     for dataloader in [dataloader_train, dataloader_test]:
 
@@ -147,21 +159,22 @@ for epoch in range(1, 1000):
         for x, x_classes, y in tqdm(iter(dataloader)):
 
             y_prims = model.forward(
-                x, x_classes
+                x.to(DEVICE), x_classes.to(DEVICE)
             )  # ar loan_ml100 x izmērs ir 57, x_classes 18, iepriekš bija kļūda
 
-
-            loss = loss_fn.forward(y_prims, y)
+            loss = loss_fn.forward(y_prims, y.to(DEVICE))
             losses.append(loss.item())
-            model_losses.append(
-                [metrics.nll(y_prim.data.numpy(), y.data.numpy()) for y_prim in y_prims]
-            )
+            
 
             if dataloader == dataloader_train:
                 loss.backward()
                 optimizer.step()
                 optimizer.zero_grad()
-
+            y=y.cpu()
+            y_prims=y_prims.cpu()
+            model_losses.append(
+                [metrics.nll(y_prim.data.numpy(), y.data.numpy()) for y_prim in y_prims]
+            )
             y_idx = np.argmax(y.data.numpy(), axis=1).astype(int)
             y_prim_idx = np.argmax(torch.mean(y_prims, 0).data.numpy(), axis=1).astype(
                 int
@@ -179,6 +192,7 @@ for epoch in range(1, 1000):
                     torch.argmax(y,1),
                     num_classes=len(dataset_full.Y_labels),
                     average="macro",
+
                 )
             )
             for idx in range(len(y_prim_idx)):
@@ -203,6 +217,7 @@ for epoch in range(1, 1000):
             conf_matrix_test = conf_matrix
 
     epoch_end = time.time()
+    
     print(
         f"epoch: {epoch} "
         f"loss_train: {loss_plot_train[-1]} "
@@ -220,7 +235,7 @@ for epoch in range(1, 1000):
         f"epoch_time: {epoch_end-epoch_start} "
     )
 
-    if epoch %2==0:
+    if epoch %10==0:
 
         fig, axes = plt.subplots(nrows=3, ncols=2)
 
@@ -264,7 +279,7 @@ for epoch in range(1, 1000):
             (axes[2, 0], conf_matrix_train),
             (axes[2, 1], conf_matrix_test),
         ]:
-            ax.imshow(conf_matrix, interpolation="nearest", cmap=plt.get_cmap("Greys"))
+            ax.imshow(conf_matrix, interpolation="nearest", cmap=plt.get_cmap("RdYlGn"))
             ax.set_xticks(
                 np.arange(len(dataset_full.Y_labels)),
                 dataset_full.Y_labels,
@@ -280,12 +295,12 @@ for epoch in range(1, 1000):
                         horizontalalignment="center",
                         verticalalignment="center",
                         backgroundcolor=(1.0, 1.0, 1.0, 0.0),
-                        color="red",
+                        color="black",
                         fontsize=10,
                     )
             ax.set_xlabel("True")
             ax.set_ylabel("Predicted")
         plt.show()
-torch.save(model, "./models/3_memb_size_div.pt")
+torch.save(model, "./models/loan_possible_works.pt")
 
 # %%

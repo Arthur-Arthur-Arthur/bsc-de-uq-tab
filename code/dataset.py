@@ -16,7 +16,7 @@ class Dataset(torch.utils.data.Dataset):
 
         self.X = np.array(X[:, : -len(self.labels)+1]).astype(np.float32)
         X_mean = np.mean(self.X, axis=0)
-        X_std = np.std(self.X, axis=0) + 1e8
+        X_std = np.std(self.X, axis=0) + 1e-8
         self.X = (self.X - X_mean) / X_std
         self.X = self.X.astype(np.float32)
         self.Y_idx=Y_idx
@@ -28,4 +28,4 @@ class Dataset(torch.utils.data.Dataset):
         return len(self.X)
 
     def __getitem__(self, idx):
-        return self.X[idx], np.array(self.X_classes[idx]), [0,0,0,1]
+        return self.X[idx], np.array(self.X_classes[idx]), self.Y[idx]
