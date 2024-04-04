@@ -67,24 +67,25 @@ def remove_outliers(df:pd.DataFrame):
         Q1 = df[column].quantile(0.25)
         Q3 = df[column].quantile(0.75)
         IQR = Q3 - Q1
-        lower = Q1 - 1.5*IQR
-        upper = Q3 + 1.5*IQR
+        lower = Q1 - 3*IQR
+        upper = Q3 + 3*IQR
         
-        # Create arrays of Boolean values indicating the outlier rows
-        upper_array = np.where(df[column] >= upper+1e8)[0]
-        lower_array = np.where(df[column] <= lower-1e8)[0]
-        
+        df_column=df[column]
+        upper_array = np.where(df_column.values >= upper+1e-8)[0]
+        lower_array=(np.where(df_column.values <= lower-1e-8)[0])     
+        drop_array=np.concatenate([lower_array,upper_array],axis=None)   
         # Removing the outliers
-        df.drop(index=upper_array, inplace=True)
-        df.drop(index=lower_array, inplace=True)
+        df.drop(index=drop_array, inplace=True)
+        df.reset_index(drop=True,inplace=True)
+
     return df
 def format_dataset(df:pd.DataFrame, y_name):
-    df = df.dropna(axis='columns',how='all')
-    df.update(df.dropna(subset='loan_status'))
+    df.dropna(axis='columns',how='all',inplace=True)
+    df.dropna(subset='loan_status',inplace=True)
     #df=df.drop(columns='id')
     df=remove_singular(df)
     df=limit_embedding_count(df,1000)
-    df=remove_too_sparse(df,0.7)
+    df=remove_too_sparse(df,0.5)
     df=merge_other(df,0.1)
     df.update(df.select_dtypes(include=['object']).fillna(df.select_dtypes(include=['object']).mode()))
     df.update(df.select_dtypes(include=['number']).fillna(df.select_dtypes(include=['number']).mean()))
@@ -134,10 +135,10 @@ def specific_cleanup(df:pd.DataFrame):
     ]
     df.drop(direct_indicators, axis=1, inplace=True)
     
-    df.drop(['id','emp_title','url','title','zip_code','grade'], axis=1, inplace=True)
+    df.drop(['id','emp_title','url','title','zip_code','grade','desc'], axis=1, inplace=True)
 
     df['sub_grade']=df['sub_grade'].apply(sub_grade_to_num)
-    for date in ['issue_d','earliest_cr_line','last_pymnt_d','next_pymnt_d','last_credit_pull_d','debt_settlement_flag_date','settlement_date']:
+    for date in ['issue_d','earliest_cr_line','last_pymnt_d','next_pymnt_d','last_credit_pull_d','debt_settlement_flag_date','settlement_date','sec_app_earliest_cr_line','hardship_start_date','hardship_end_date','payment_plan_start_date']:
         df[date]=df[date].apply(date_to_num)
     print(df.select_dtypes(include=["object"]).nunique())
     return df
@@ -173,7 +174,7 @@ csv_load_path="./data/accepted_2007_to_2018Q4.csv"
 pkl_load_path="./data/accepted_pickle.pkl"
 csv_save_path="./data/squeaky_clean2.csv"
 pkl_save_path="./data/loan_squeak.pkl"
-load_from_csv=True
+load_from_csv=False
 save_to_csv=True
 if load_from_csv:
     df= pd.read_csv(csv_load_path,low_memory=False)  
