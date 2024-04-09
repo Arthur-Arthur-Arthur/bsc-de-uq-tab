@@ -10,8 +10,14 @@ def random_noise(x:torch.Tensor,noise_weight): #offsets
     x+=torch.randn(x.shape)*noise_weight
     return x
 
-def randomise_labels(x_classes:torch.Tensor,randomised_perecentage,labels): #offsets 
-    replace=torch.rand(x_classes.shape)>randomised_perecentage
+def uniform_feature_noise(x_shape,x_max=1.0,x_min=1.0,stretch=1.0): #offsets 
+    x=(torch.rand(x_shape)*(x_max+x_min)-x_min)*stretch
+    return x
+
+
+
+def randomise_labels(x_classes:torch.Tensor,randomised_part,labels): #offsets 
+    replace=torch.rand(x_classes.shape)>randomised_part
     dont_replace= replace==False
     list_len = [len(i) for i in labels]
     random_labels=torch.randint(high=max(list_len),size=x_classes.shape)

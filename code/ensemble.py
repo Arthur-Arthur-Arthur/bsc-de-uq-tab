@@ -76,7 +76,7 @@ class Layer(torch.nn.Module):
         self.layer = torch.nn.Sequential(
             torch.nn.Linear(input_size, output_size,dtype=torch.float32),
             torch.nn.BatchNorm1d(output_size,dtype=torch.float32),
-            torch.nn.Tanh(),                
+            torch.nn.ReLU(),                
         )
 
     def forward(self, x):

@@ -15,10 +15,12 @@ class Dataset(torch.utils.data.Dataset):
         self.X_classes = np.array(X[:, -len(self.labels) + 1 :]).astype(np.int32)
 
         self.X = np.array(X[:, : -len(self.labels)+1]).astype(np.float32)
-        X_mean = np.mean(self.X, axis=0)
-        X_std = np.std(self.X, axis=0) + 1e-8
-        self.X = (self.X - X_mean) / X_std
+        self.X_mean = np.mean(self.X, axis=0)
+        self.X_std = np.std(self.X, axis=0) + 1e-8
+        self.X = (self.X - self.X_mean) / self.X_std
         self.X = self.X.astype(np.float32)
+        self.X_max=np.max(self.X,axis=0)
+        self.X_min=np.min(self.X,axis=0)
         self.Y_idx=Y_idx
         self.Y_labels = self.labels[-1]
 

@@ -1,18 +1,20 @@
-import ensemble
 import torch
-import dataset
 import numpy as np
 import torch.utils.data
+from tqdm import tqdm
+import pandas as pd
+
+import ensemble
+import dataset
 import noiser
 import metrics
 import time
 import loss_sep_sha
-from tqdm import tqdm
-import pandas as pd
+
 
 
 if __name__ == '__main__':
-    LEARNING_RATE = 1e-1
+    LEARNING_RATE = 1e-3
     BATCH_SIZE = 2048
     TRAIN_SPLIT = 0.7
     VALIDATION_SPLIT = 0.1
@@ -58,7 +60,7 @@ if __name__ == '__main__':
         num_workers=2,
         drop_last=True,
         sampler=sampler,
-        # shuffle=True
+        #shuffle=True
     )
     dataloader_valid = torch.utils.data.DataLoader(
         dataset=dataset_valid,
@@ -72,12 +74,12 @@ if __name__ == '__main__':
         num_workers=0,
         shuffle=False,
     )
-    for log_count in range(0,5):
+    for log_count in range(1,4):
         n_members=2**log_count
         depths=[8]*n_members #constant depth experiment
-        widths=[int(1024/n_members)]*n_members
+        widths=[int(1024)]*n_members
         modes=["res"]*n_members
-        model_name="fast"+str(n_members)+"M_"+str(depths[0])+"X"+str(widths[0])
+        model_name="good"+str(n_members)+"M_"+str(depths[0])+"X"+str(widths[0])
         model_ensemble = ensemble.Ensemble(
             input_size=(
                 dataset_full.X.shape[1] + dataset_full.X_classes.shape[1] * EMBEDDING_SIZE
@@ -104,7 +106,7 @@ if __name__ == '__main__':
         
         model_path = "./models/"+model_name+".pth"
         # TRAINING
-        for epoch in range(1, 10):
+        for epoch in range(1, 30):
             epoch_validation_losses = []
             for dataloader in [dataloader_train, dataloader_valid]:
 
@@ -165,7 +167,7 @@ if __name__ == '__main__':
                 )
                 # x_noised=noiser.random_noise(x,corruption/10)
                 # DISTANCED
-                x_distanced = noiser.random_offset(x, corruption / 2)
+                x_distanced = noiser.random_offset(x, corruption / 5)
                 # INFERENCE
                 y_prims = model.forward(x_distanced.to(DEVICE), x_corrputed_classes.to(DEVICE))
                 loss = loss_fn.forward(y_prims, y.to(DEVICE))

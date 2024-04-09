@@ -10,14 +10,17 @@ df= pd.read_csv(csv_path,low_memory=False)
 for column in range(0):# df.select_dtypes(include=['number']).columns:
     df[column].plot.hist()
     plt.title('Histogram of '+str(column))
-    plt.savefig("./figs/"+str(column)+'_hist.png')
+    plt.tight_layout()
+    plt.savefig("./figs/float_"+str(column)+'_hist.png')
     plt.clf()
 #plt.show()
-for column in df.select_dtypes(exclude=['number']).drop(columns='id').columns:
+if True:
+    column='loan_status'#for column in df.select_dtypes(exclude=['number']).columns:
     if df[column].nunique()<1000:
         df[column].value_counts().plot(kind='bar')
         plt.title('Category distribution of '+str(column))
-        plt.savefig("./figs/string"+str(column)+'_hist.png')
+        plt.tight_layout()
+        plt.savefig("./figs/orig_string_"+str(column)+'_hist.png')
         plt.clf()
 
 

@@ -79,6 +79,7 @@ def remove_outliers(df:pd.DataFrame):
         df.reset_index(drop=True,inplace=True)
 
     return df
+
 def format_dataset(df:pd.DataFrame, y_name):
     df.dropna(axis='columns',how='all',inplace=True)
     df.dropna(subset='loan_status',inplace=True)
@@ -89,7 +90,7 @@ def format_dataset(df:pd.DataFrame, y_name):
     df=merge_other(df,0.1)
     df.update(df.select_dtypes(include=['object']).fillna(df.select_dtypes(include=['object']).mode()))
     df.update(df.select_dtypes(include=['number']).fillna(df.select_dtypes(include=['number']).mean()))
-    df=remove_outliers(df)
+    #df=remove_outliers(df)
     df=type_sort(df)
     df=move_y_to_last(df,y_name)
 
@@ -101,6 +102,11 @@ def table_to_learn(df,y_name):
     return df_x,df_y,labels
 
 def specific_cleanup(df:pd.DataFrame):
+    bad_loan = [ "Default", "Does not meet the credit policy. Status:Charged Off", "In Grace Period",
+            "Late (16-30 days)", "Late (31-120 days)"]
+    good_loan="Does not meet the credit policy. Status:Fully Paid"
+    df['loan_status'].replace(bad_loan,"Charged Off")
+    df['loan_status'].replace(good_loan,"Fully Paid")
     emp_length_mapping = {
     '10+ years': 10,
     '9 years': 9,
