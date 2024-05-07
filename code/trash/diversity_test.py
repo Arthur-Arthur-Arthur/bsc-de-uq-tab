@@ -73,14 +73,14 @@ if __name__ == '__main__':
         num_workers=0,
         shuffle=False,
     )
-    for log_diversity in range(-2,3):
-        diversity_weight=10**(log_diversity)
+    for log_diversity in range(-2,0):
+        diversity_weight:float=10**(log_diversity)
         log_count=2
         n_members=2**log_count
         depths=[8]*n_members #constant depth experiment
         widths=[int(1024/n_members)]*n_members
         modes=["res"]*n_members
-        model_name=str(diversity_weight)+"diverse_std"+str(n_members)+"M_"+str(depths[0])+"X"+str(widths[0])
+        model_name=str(diversity_weight)+"diverse"+str(n_members)+"M_"+str(depths[0])+"X"+str(widths[0])
         model_ensemble = ensemble.Ensemble(
             input_size=(
                 dataset_full.X.shape[1] + dataset_full.X_classes.shape[1] * EMBEDDING_SIZE
@@ -98,6 +98,7 @@ if __name__ == '__main__':
             ensemble=model_ensemble,
         )
         model.to(DEVICE)
+        model_ensemble.feature_mask=model_ensemble.feature_mask.to('cuda')
 
 
 
@@ -107,6 +108,7 @@ if __name__ == '__main__':
         
         model_path = "./models/"+model_name+".pth"
         # TRAINING
+        model.train()
         for epoch in range(1, 10):
             epoch_validation_losses = []
             for dataloader in [dataloader_train, dataloader_valid]:
@@ -124,11 +126,12 @@ if __name__ == '__main__':
 
                     target_loss = loss_fn.forward(y_prims, y.to(DEVICE))
                     if dataloader == dataloader_train:
-                        ood_x=noiser.uniform_feature_noise(x.shape,stretch=1)
+                        ood_x=noiser.uniform_feature_noise(x.shape,stretch=10).to(torch.float32)
                         random_classes=noiser.randomise_labels(x_classes,1,labels=dataset_full.labels[:-1])
                         ood_y=model.forward(ood_x.to(DEVICE), random_classes.to(DEVICE))
                         ood_y_mean=torch.mean(ood_y, 0)
-                        diversity_loss=torch.mean(torch.std(ood_y,0))
+                        dist_weights=torch.dist(ood_x,0)
+                        diversity_loss=loss_sep_sha.LossReweighted().forward(ood_x,ood_y,ood_y_mean)
                     else:
                         diversity_loss=0
                     loss=target_loss-diversity_weight*diversity_loss

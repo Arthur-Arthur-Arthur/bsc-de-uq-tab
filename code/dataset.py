@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import torch.utils.data
 import pickle
 import torch.nn.functional as F
 
@@ -31,3 +32,26 @@ class Dataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         return self.X[idx], np.array(self.X_classes[idx]), self.Y[idx]
+
+def class_weights(subset:torch.utils.data.Subset,dataset:Dataset):
+    y_train_indices = subset.indices
+
+    y_train = [dataset.Y_idx[i] for i in y_train_indices]
+
+    class_sample_count = np.array(
+        [len(np.where(y_train == t)[0]) for t in np.unique(y_train)]
+    )
+
+    weight = 1.0 / class_sample_count
+    samples_weight = np.array([weight[t] for t in y_train])
+    samples_weight = torch.from_numpy(samples_weight)
+    return samples_weight
+
+def equal_sampler(subset:torch.utils.data.Subset,dataset:Dataset):
+    samples_weight = class_weights(subset,dataset)
+    sampler = torch.utils.data.WeightedRandomSampler(
+        samples_weight.type("torch.FloatTensor"), len(samples_weight)
+    )
+    return sampler
+
+

@@ -78,7 +78,7 @@ if __name__ == '__main__':
         num_workers=0,
         shuffle=False,
     )
-    log_count=4
+    log_count=2
     n_members=2**log_count
     depths=[8]*n_members #constant depth experiment
     widths=[int(1024/n_members)]*n_members
@@ -111,7 +111,7 @@ if __name__ == '__main__':
     model_path = "./models/"+model_name+".pth"
     # TRAINING
     temperature=1.0
-    for epoch in range(1, 10):
+    for epoch in range(0, 10):
         epoch_validation_losses = []
         for dataloader in [dataloader_train, dataloader_valid]:
 
@@ -125,13 +125,9 @@ if __name__ == '__main__':
 
                 y_prims = model.forward(x.to(DEVICE), x_classes.to(DEVICE))
 
-                target_loss = loss_fn.forward(y_prims, y.to(DEVICE))
+                loss = loss_fn.forward(y_prims, y.to(DEVICE))
 
-                ood_x=noiser.uniform_feature_noise(x.shape,stretch=100)
-                random_classes=noiser.randomise_labels(x_classes,1,labels=dataset_full.labels[:-1])
-                ood_y=model.forward(ood_x.to(DEVICE), random_classes.to(DEVICE))
-                diversity_loss=-torch.mean(torch.std(ood_y,0))
-                loss=target_loss+DIVERSITY_WEIGHT*diversity_loss
+
                 if dataloader == dataloader_train:
                     loss.backward()
                     optimizer.step()

@@ -79,7 +79,25 @@ def remove_outliers(df:pd.DataFrame):
         df.reset_index(drop=True,inplace=True)
 
     return df
+def winsorize_outliers(df:pd.DataFrame):
+    for column in df.select_dtypes(include=['number']).columns:
+        Q1 = df[column].quantile(0.25)
+        Q3 = df[column].quantile(0.75)
+        IQR = Q3 - Q1
+        lower = Q1 - 3*IQR
+        upper = Q3 + 3*IQR
+        
+        df_column=df[column]
+        #upper_array = np.where(df_column.values >= upper+1e-8)[0]
+        df_column.where(df_column.values <= upper,upper,inplace=True)
+        #lower_array=(np.where(df_column.values <= lower-1e-8)[0])   
+        df_column.where(df_column.values >=lower,lower,inplace=True)  
+        #drop_array=np.concatenate([lower_array,upper_array],axis=None)   
+        # Removing the outliers
+        #df.drop(index=drop_array, inplace=True)
+        df.reset_index(drop=True,inplace=True)
 
+    return df
 def format_dataset(df:pd.DataFrame, y_name):
     df.dropna(axis='columns',how='all',inplace=True)
     df.dropna(subset='loan_status',inplace=True)
@@ -91,6 +109,7 @@ def format_dataset(df:pd.DataFrame, y_name):
     df.update(df.select_dtypes(include=['object']).fillna(df.select_dtypes(include=['object']).mode()))
     df.update(df.select_dtypes(include=['number']).fillna(df.select_dtypes(include=['number']).mean()))
     #df=remove_outliers(df)
+    #df=winsorize_outliers(df)
     df=type_sort(df)
     df=move_y_to_last(df,y_name)
 
@@ -105,8 +124,8 @@ def specific_cleanup(df:pd.DataFrame):
     bad_loan = [ "Default", "Does not meet the credit policy. Status:Charged Off", "In Grace Period",
             "Late (16-30 days)", "Late (31-120 days)"]
     good_loan="Does not meet the credit policy. Status:Fully Paid"
-    df['loan_status'].replace(bad_loan,"Charged Off")
-    df['loan_status'].replace(good_loan,"Fully Paid")
+    df['loan_status'].replace(bad_loan,"Charged Off",inplace=True)
+    df['loan_status'].replace(good_loan,"Fully Paid",inplace=True)
     emp_length_mapping = {
     '10+ years': 10,
     '9 years': 9,
@@ -178,7 +197,7 @@ def date_to_num(date:str):
 
 csv_load_path="./data/accepted_2007_to_2018Q4.csv"
 pkl_load_path="./data/accepted_pickle.pkl"
-csv_save_path="./data/squeaky_clean2.csv"
+csv_save_path="./data/clean.csv"
 pkl_save_path="./data/loan_squeak.pkl"
 load_from_csv=False
 save_to_csv=True

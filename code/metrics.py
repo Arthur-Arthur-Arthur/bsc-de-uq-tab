@@ -37,5 +37,5 @@ def calc_ece(y,y_prim,bin_count):
     return np.mean(eces)/total_samples
 #print(calc_ece(np.array([[1,0,0],[1,0,0],[1,0,0],[1,0,0]]),np.array([[0.1,0.3,0.5],[0.2,0.4,0.4],[0.1,0,0.9],[0.2,0.3,0.4]]),bin_count=10))
 def nll(y_prim,y):
-    loss = -np.mean(y * np.log(y_prim + 1e-8))
+    loss = -np.mean(np.sum(a=(y * np.log(y_prim + 1e-8)),axis=-1),axis=-1)
     return loss

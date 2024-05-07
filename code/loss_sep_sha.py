@@ -18,10 +18,21 @@ class LossSeperate(torch.nn.Module):
     def forward(self, y_prims, y):
         y = y.unsqueeze(dim=0)
         y = y.expand(y_prims.size())
-        losses = torch.mean(-(y * torch.log(y_prims + 1e-8)), 0)
+        losses = torch.sum(-(y * torch.log(y_prims + 1e-8)), -1)
         loss = torch.mean(losses)
         return loss
 
+class LossReweighted(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self,x, y_prims, y):
+        y = y.unsqueeze(dim=0)
+        y = y.expand(y_prims.size())
+        losses = torch.sum(-(y * torch.log(y_prims + 1e-8)), -1)
+        dist_weights=torch.mean(torch.abs(x),-1)
+        loss = torch.mean(losses*dist_weights)
+        return loss
 
 class LossShared(torch.nn.Module):
     def __init__(self):
@@ -32,6 +43,14 @@ class LossShared(torch.nn.Module):
         loss = -torch.mean(y * torch.log(y_prim + 1e-8))
         return loss
 
+class LossNLL(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, y_prim: torch.Tensor, y):
+        loss = -torch.mean(torch.sum((y * torch.log(y_prim + 1e-8)),-1))
+        return loss
+    
 class LossRepulse(torch.nn.Module):
     def __init__(self,repulsion=1):
         super().__init__()

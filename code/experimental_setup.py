@@ -59,14 +59,15 @@ if __name__ == '__main__':
         batch_size=BATCH_SIZE,
         num_workers=2,
         drop_last=True,
-        sampler=sampler,
+        sampler=dataset.equal_sampler(dataset_train,dataset_full),
         #shuffle=True
     )
     dataloader_valid = torch.utils.data.DataLoader(
         dataset=dataset_valid,
         batch_size=BATCH_SIZE,
         num_workers=2,
-        shuffle=False,
+        sampler=dataset.equal_sampler(dataset_valid,dataset_full),
+        #shuffle=False
     )
     dataloader_test = torch.utils.data.DataLoader(
         dataset=dataset_test,
@@ -74,12 +75,12 @@ if __name__ == '__main__':
         num_workers=0,
         shuffle=False,
     )
-    for log_count in range(1,4):
+    for log_count in [0,3]:
         n_members=2**log_count
         depths=[8]*n_members #constant depth experiment
         widths=[int(1024)]*n_members
         modes=["res"]*n_members
-        model_name="good"+str(n_members)+"M_"+str(depths[0])+"X"+str(widths[0])
+        model_name="batches"+str(n_members)+"M_"+str(depths[0])+"X"+str(widths[0])
         model_ensemble = ensemble.Ensemble(
             input_size=(
                 dataset_full.X.shape[1] + dataset_full.X_classes.shape[1] * EMBEDDING_SIZE
@@ -91,6 +92,7 @@ if __name__ == '__main__':
             n_members=n_members,
             device=DEVICE,
         )
+        model_ensemble.feature_mask=ensemble.make_feature_mask(model_ensemble,0.9).to(DEVICE)
         model = ensemble.EmbAndEnsemble(
             dataset_labels=dataset_full.labels,
             embedding_size=EMBEDDING_SIZE,
@@ -106,7 +108,7 @@ if __name__ == '__main__':
         
         model_path = "./models/"+model_name+".pth"
         # TRAINING
-        for epoch in range(1, 30):
+        for epoch in range(1, 10):
             epoch_validation_losses = []
             for dataloader in [dataloader_train, dataloader_valid]:
 
@@ -118,7 +120,7 @@ if __name__ == '__main__':
                     torch.set_grad_enabled(True)
                 for x, x_classes, y in tqdm(iter(dataloader)):
 
-                    y_prims = model.forward(x.to(DEVICE), x_classes.to(DEVICE))
+                    y_prim,y_prims = model.forward(x.to(DEVICE), x_classes.to(DEVICE))
 
                     loss = loss_fn.forward(y_prims, y.to(DEVICE))
                     if dataloader == dataloader_train:
@@ -127,6 +129,7 @@ if __name__ == '__main__':
                         optimizer.zero_grad()
                     elif dataloader == dataloader_valid:
                         epoch_validation_losses.append(loss.item())
+                print(loss)
                 if dataloader == dataloader_valid:
                     epoch_loss = np.mean(epoch_validation_losses)
                     epoch_validation_losses.clear()
@@ -148,7 +151,7 @@ if __name__ == '__main__':
         )
         start=time.process_time()
         for x, x_classes, y in tqdm(iter(dataloader_test)):
-                y_prims = model.forward(x.to(DEVICE), x_classes.to(DEVICE))
+                y_prim,y_prims = model.forward(x.to(DEVICE), x_classes.to(DEVICE))
         end =time.process_time()
         epoch_time=end-start
         data.loc[0,"time"] = epoch_time
@@ -169,7 +172,7 @@ if __name__ == '__main__':
                 # DISTANCED
                 x_distanced = noiser.random_offset(x, corruption / 5)
                 # INFERENCE
-                y_prims = model.forward(x_distanced.to(DEVICE), x_corrputed_classes.to(DEVICE))
+                y_prim,y_prims = model.forward(x_distanced.to(DEVICE), x_corrputed_classes.to(DEVICE))
                 loss = loss_fn.forward(y_prims, y.to(DEVICE))
                 y = y.cpu()
                 y_prims = y_prims.cpu()
@@ -195,4 +198,4 @@ if __name__ == '__main__':
             data.loc[corruption,"confidence"] = np.mean(confs)
             data.loc[corruption,"std"] = np.mean(stds)
             data.loc[corruption,"ece"] = metrics.calc_ece(y_for_ece, y_prims_for_ece, 10)
-        data.to_csv("./data/"+model_name+"_results.csv",index=False)
+        data.to_csv("./data/experiments_better/"+model_name+"_results.csv",index=False)
