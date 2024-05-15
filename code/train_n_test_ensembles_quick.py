@@ -20,7 +20,7 @@ if __name__ == "__main__":
     N_MEMBERS = 10
     MAX_EPOCHS = 30
     LEARNING_RATE = 1e-2
-    BATCH_SIZE = 1024
+    BATCH_SIZE = 128
     TRAIN_SPLIT = 0.7
     VALIDATION_SPLIT = 0.1
     EMBEDDING_SIZE = 2
@@ -63,12 +63,12 @@ if __name__ == "__main__":
 
         # MODEL SPECIFICATION
         n_members = N_MEMBERS
-        depths = [16] * n_members  # constant depth experiment
-        widths = [64] * n_members
+        depths = [8] * n_members  # constant depth experiment
+        widths = [16] * n_members
         modes = ["res"] * n_members
         model_name = (
             str(n_members)
-            + "_adult_"
+            + "_adult2_"
             + str(datetime.now().strftime("%d-%m-%Y_%H-%M-%S_"))
         )
         # MODEL CREATION

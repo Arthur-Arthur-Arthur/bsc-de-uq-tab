@@ -47,6 +47,8 @@ for type in ["noise", "distance"]:
     stats = ["ECE", "loss", "accuracy", "confidence"]
     cmap = plt.get_cmap(name="hsv", lut=5)
     for i, stat in enumerate(stats):
+        plt.figure(figsize=[12.8,9.6])
+
         sub_i = -1
         for column in df_means.drop(columns=["time", "best_epoch"]).columns:
             if stat in column and "T_scaled" not in column:

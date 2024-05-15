@@ -20,7 +20,7 @@ if __name__ == "__main__":
     N_MEMBERS = 10
     MAX_EPOCHS = 30
     LEARNING_RATE = 1e-2
-    BATCH_SIZE = 1024
+    BATCH_SIZE = 128
     TRAIN_SPLIT = 0.7
     VALIDATION_SPLIT = 0.1
     EMBEDDING_SIZE = 2
@@ -29,7 +29,7 @@ if __name__ == "__main__":
         DEVICE = "cuda"
     for run in range(NUM_TRAININGS):
         # DATASETS AND DATALOADERS
-        dataset_full = dataset.Dataset("./data/loan_squeak.pkl")
+        dataset_full = dataset.Dataset("./data/adult.pkl")
         dataset_full.Y.to(DEVICE)
 
         dataset_train, dataset_valid, dataset_test = torch.utils.data.random_split(
@@ -69,7 +69,7 @@ if __name__ == "__main__":
         widths = [64] * n_members
         modes = ["res"] * n_members
         model_name = (
-            str(n_members)+"_Well_"+ str(datetime.now().strftime("%d-%m-%Y_%H-%M-%S_"))
+            str(n_members)+"_Well_adult_"+ str(datetime.now().strftime("%d-%m-%Y_%H-%M-%S_"))
         )
         # MODEL CREATION
         model_ensemble = ensemble.Ensemble(
