@@ -13,10 +13,10 @@ import loss_sep_sha
 
 
 if __name__ == "__main__":
-    NUM_TRAININGS = 2
+    NUM_TRAININGS = 5
     N_MEMBERS = 10
     MAX_EPOCHS = 10
-    LEARNING_RATE = 1e-2
+    LEARNING_RATE = 1e-1
     BATCH_SIZE = 2048
     TRAIN_SPLIT = 0.7
     VALIDATION_SPLIT = 0.1
@@ -81,7 +81,7 @@ if __name__ == "__main__":
         modes = ["res"] * n_members
         model_name = (
             str(training)
-            + "RUN"
+            + "RUN_FEx"
             + str(n_members)
             + "M_"
             + str(depths[0])
@@ -101,7 +101,7 @@ if __name__ == "__main__":
             device=DEVICE,
         )
         model_ensemble.feature_mask = ensemble.make_feature_mask(
-            model_ensemble, 0.9
+            model_ensemble, 0.2*training
         ).to(DEVICE)
         model = ensemble.EmbAndEnsemble(
             dataset_labels=dataset_full.labels,

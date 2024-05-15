@@ -2,13 +2,15 @@ import torch
 import dataset
 
 def random_offset(x:torch.Tensor,distance): #offsets 
-    x+=torch.randint(-1,2,x.shape)*distance
-    return x
+    cor_x=x.clone()
+    cor_x+=torch.randint(-1,2,x.shape)*distance
+    return cor_x
 
 def random_noise(x:torch.Tensor,noise_weight): #offsets 
-    x*=(1-noise_weight)
-    x+=torch.randn(x.shape)*noise_weight
-    return x
+    cor_x=x.clone()
+    cor_x*=(1-noise_weight)
+    cor_x+=torch.randn(x.shape)*noise_weight
+    return cor_x
 
 def uniform_feature_noise(x_shape,x_max=1.0,x_min=1.0,stretch=1.0): #offsets 
     x=(torch.rand(x_shape)*(x_max+x_min)-x_min)*stretch

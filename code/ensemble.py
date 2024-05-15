@@ -50,22 +50,22 @@ class Ensemble_Base(torch.nn.Module):
 
     def forward(self, x:torch.Tensor):
         if self.training and self.seperate_batches:
-            x_chunk=x.chunk(len(self.members),0)
-            outs = torch.stack(
-                [
-                    member.forward(x_chunk[i] * self.feature_mask[i, :])
-                    for i, member in enumerate(self.members)
-                ]
-            )
-            # out = self.members[self.current_model_train].forward(
-            #     x * self.feature_mask[self.current_model_train, :]
+            # x_chunk=x.chunk(len(self.members),0)
+            # outs = torch.stack(
+            #     [
+            #         member.forward(x_chunk[i] * self.feature_mask[i, :])
+            #         for i, member in enumerate(self.members)
+            #     ]
             # )
+            out = self.members[self.current_model_train].forward(
+                x * self.feature_mask[self.current_model_train, :]
+            )
             # self.current_model_train += 1
             # self.current_model_train %= len(self.members)
-            # outs=out.unsqueeze(0)
-            # outs = outs.expand((len(self.members),-1,-1))
-            #previous code that passed batches to 1 member at a time instead of splitting. splitting is faster
-            out=torch.reshape(outs,(-1,)+outs.shape[2:])
+            outs=out.unsqueeze(0)
+            outs = outs.expand((len(self.members),-1,-1))
+            # previous code that passed batches to 1 member at a time instead of splitting. splitting is faster
+
         else:
             outs = torch.stack(
                 [

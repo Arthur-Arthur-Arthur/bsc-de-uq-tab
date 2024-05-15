@@ -33,27 +33,6 @@ if __name__ == '__main__':
         generator=torch.Generator().manual_seed(0),
     )
 
-
-    def class_weights():
-        y_train_indices = dataset_train.indices
-
-        y_train = [dataset_full.Y_idx[i] for i in y_train_indices]
-
-        class_sample_count = np.array(
-            [len(np.where(y_train == t)[0]) for t in np.unique(y_train)]
-        )
-
-        weight = 1.0 / class_sample_count
-        samples_weight = np.array([weight[t] for t in y_train])
-        samples_weight = torch.from_numpy(samples_weight)
-        return samples_weight
-
-
-    samples_weight = class_weights()
-    sampler = torch.utils.data.WeightedRandomSampler(
-        samples_weight.type("torch.FloatTensor"), len(samples_weight)
-    )
-
     dataloader_train = torch.utils.data.DataLoader(
         dataset=dataset_train,
         batch_size=BATCH_SIZE,
@@ -102,7 +81,7 @@ if __name__ == '__main__':
 
 
 
-        loss_fn = loss_sep_sha.LossSeperate().to(DEVICE)
+        loss_fn = loss_sep_sha.LossNLL().to(DEVICE)
         optimizer = torch.optim.RAdam(model.parameters(), LEARNING_RATE)
         lowest_validation_loss = 1e16
         
@@ -122,7 +101,7 @@ if __name__ == '__main__':
 
                     y_prim,y_prims = model.forward(x.to(DEVICE), x_classes.to(DEVICE))
 
-                    loss = loss_fn.forward(y_prims, y.to(DEVICE))
+                    loss = loss_fn.forward(y_prim, y.to(DEVICE))
                     if dataloader == dataloader_train:
                         loss.backward()
                         optimizer.step()
@@ -173,7 +152,7 @@ if __name__ == '__main__':
                 x_distanced = noiser.random_offset(x, corruption / 5)
                 # INFERENCE
                 y_prim,y_prims = model.forward(x_distanced.to(DEVICE), x_corrputed_classes.to(DEVICE))
-                loss = loss_fn.forward(y_prims, y.to(DEVICE))
+                loss = loss_fn.forward(y_prim, y.to(DEVICE))
                 y = y.cpu()
                 y_prims = y_prims.cpu()
                 losses.append(loss.item())

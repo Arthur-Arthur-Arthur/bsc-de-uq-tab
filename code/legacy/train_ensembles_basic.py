@@ -13,11 +13,10 @@ import loss_sep_sha
 
 
 if __name__ == "__main__":
-    NUM_TRAININGS = 1
+    NUM_TRAININGS = 2
     N_MEMBERS = 10
     MAX_EPOCHS = 10
-    diversity_weight=1e-4
-    LEARNING_RATE = 1e-2
+    LEARNING_RATE = 1e-1
     BATCH_SIZE = 2048
     TRAIN_SPLIT = 0.7
     VALIDATION_SPLIT = 0.1
@@ -35,28 +34,9 @@ if __name__ == "__main__":
             generator=torch.Generator().manual_seed(0),
         )
 
-        def class_weights():
-            y_train_indices = dataset_train.indices
-
-            y_train = [dataset_full.Y_idx[i] for i in y_train_indices]
-
-            class_sample_count = np.array(
-                [len(np.where(y_train == t)[0]) for t in np.unique(y_train)]
-            )
-
-            weight = 1.0 / class_sample_count
-            samples_weight = np.array([weight[t] for t in y_train])
-            samples_weight = torch.from_numpy(samples_weight)
-            return samples_weight
-
-        samples_weight = class_weights()
-        sampler = torch.utils.data.WeightedRandomSampler(
-            samples_weight.type("torch.FloatTensor"), len(samples_weight)
-        )
-
         dataloader_train = torch.utils.data.DataLoader(
             dataset=dataset_train,
-            batch_size=BATCH_SIZE,
+            batch_size=BATCH_SIZE*N_MEMBERS, #required that batch is divisible by member amount
             num_workers=2,
             drop_last=True,
             sampler=dataset.equal_sampler(dataset_train, dataset_full),
@@ -111,7 +91,7 @@ if __name__ == "__main__":
         )
         model.to(DEVICE)
 
-        loss_fn = loss_sep_sha.LossSeperate().to(DEVICE)
+        loss_fn = loss_sep_sha.LossNLL().to(DEVICE)
         optimizer = torch.optim.RAdam(model.parameters(), LEARNING_RATE)
         lowest_validation_loss = 1e16
 
@@ -131,17 +111,7 @@ if __name__ == "__main__":
                     torch.set_grad_enabled(True)
                 for x, x_classes, y in tqdm(iter(dataloader)):
                     y_prim, y_prims = model.forward(x.to(DEVICE), x_classes.to(DEVICE))
-                    target_loss = loss_fn.forward(y_prims, y.to(DEVICE))
-                    if dataloader == dataloader_train:
-                        model_ensemble.seperate_batches=False
-                        ood_x=noiser.uniform_feature_noise(x.shape,stretch=10).to(torch.float32)
-                        random_classes=noiser.randomise_labels(x_classes,1,labels=dataset_full.labels[:-1])
-                        ood_y_mean,ood_ys=model.forward(ood_x.to(DEVICE), random_classes.to(DEVICE))
-                        diversity_loss=loss_sep_sha.LossReweighted().forward(ood_x.to(DEVICE),ood_ys,ood_y_mean)
-                        model_ensemble.seperate_batches=True
-                    else:
-                        diversity_loss=0
-                    loss=target_loss-diversity_weight*diversity_loss
+                    loss = loss_fn.forward(y_prim, y.to(DEVICE))
                     if dataloader == dataloader_train:
                         loss.backward()
                         optimizer.step()

@@ -19,3 +19,4 @@ for path in paths:
 combo_df=pd.concat(df_array)
 combo_df=combo_df.sort_values("loss")
 print(combo_df)
+combo_df.to_csv("data\grid_search.csv")
